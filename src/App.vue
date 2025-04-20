@@ -21,27 +21,6 @@ const route = useRoute()
                 首页
               </router-link>
               <router-link
-                to="/activity-map"
-                class="text-gray-500 hover:text-primary"
-                :class="{ 'text-primary font-medium': route.path === '/activity-map' }"
-              >
-                活动地图
-              </router-link>
-              <router-link
-                to="/volunteer"
-                class="text-gray-500 hover:text-primary"
-                :class="{ 'text-primary font-medium': route.path === '/volunteer' }"
-              >
-                志愿服务
-              </router-link>
-              <router-link
-                to="/statistics"
-                class="text-gray-500 hover:text-primary"
-                :class="{ 'text-primary font-medium': route.path === '/statistics' }"
-              >
-                数据统计
-              </router-link>
-              <router-link
                 to="/admin"
                 class="text-gray-500 hover:text-primary"
                 :class="{ 'text-primary font-medium': route.path === '/admin' }"
