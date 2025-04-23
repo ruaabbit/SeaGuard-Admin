@@ -433,7 +433,7 @@ onBeforeUnmount(() => {
 
 <style>
 .map-container {
-  background-image: url('https://ai-public.mastergo.com/gen_page/map_placeholder_1280x720.png');
+  background-image: url('/map_placeholder.jpg');
   background-position: center;
   background-size: cover;
 }
