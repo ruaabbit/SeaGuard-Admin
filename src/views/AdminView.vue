@@ -1,71 +1,59 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { activityAPI, registrationAPI, volunteerAPI } from '../services/api'
 
-// 活动列表数据
-const activities = ref([
-  {
-    id: 1,
-    title: '深圳湾海滩清理行动',
-    date: '2024-02-20',
-    status: '报名中',
-    location: '深圳湾',
-    capacity: 20,
-    registered: 15,
-  },
-  {
-    id: 2,
-    title: '珠海情侣路海岸清洁',
-    date: '2024-02-18',
-    status: '进行中',
-    location: '珠海',
-    capacity: 25,
-    registered: 25,
-  },
-  {
-    id: 3,
-    title: '大鹏新区海洋保护行动',
-    date: '2024-02-25',
-    status: '报名中',
-    location: '大鹏新区',
-    capacity: 15,
-    registered: 8,
-  },
-])
+// 状态数据
+const activities = ref([])
+const volunteers = ref([])
+const registrations = ref([])
 
-const volunteers = ref([
-  {
-    id: 1,
-    name: '张志远',
-    hours: 120,
-    activities: 15,
-    phone: '13800138000',
-    status: '活跃',
-  },
-  {
-    id: 2,
-    name: '林美琪',
-    hours: 98,
-    activities: 12,
-    phone: '13800138001',
-    status: '活跃',
-  },
-  {
-    id: 3,
-    name: '王浩然',
-    hours: 86,
-    activities: 10,
-    phone: '13800138002',
-    status: '活跃',
-  },
-  {
-    id: 4,
-    name: '李雨欣',
-    hours: 75,
-    activities: 8,
-    phone: '13800138003',
-    status: '活跃',
-  },
-])
+// 加载状态
+const loading = ref({
+  activities: false,
+  volunteers: false,
+  registrations: false,
+})
+
+// 错误信息
+const error = ref({
+  activities: null,
+  volunteers: null,
+  registrations: null,
+})
+
+// 加载活动列表
+async function loadActivities() {
+  loading.value.activities = true
+  error.value.activities = null
+  try {
+    activities.value = await activityAPI.getActivities()
+  } catch (err) {
+    error.value.activities = err.message
+    console.error('加载活动列表失败:', err)
+  } finally {
+    loading.value.activities = false
+  }
+}
+
+// 加载志愿者列表
+async function loadVolunteers() {
+  loading.value.volunteers = true
+  error.value.volunteers = null
+  try {
+    volunteers.value = await volunteerAPI.getVolunteers()
+  } catch (err) {
+    error.value.volunteers = err.message
+    console.error('加载志愿者列表失败:', err)
+  } finally {
+    loading.value.volunteers = false
+  }
+}
+
+// 页面加载时获取数据
+onMounted(() => {
+  loadActivities()
+  loadVolunteers()
+})
 
 // 新建活动表单数据
 const newActivity = ref({
@@ -111,43 +99,30 @@ const editVolunteer = ref({
   address: '',
 })
 
-// 报名列表数据
-const registrations = ref([
-  {
-    id: 1,
-    activityId: 1,
-    name: '张三',
-    phone: '13800138004',
-    idCard: '440301199001011234',
-    email: 'zhangsan@example.com',
-    emergencyContact: '李四',
-    emergencyPhone: '13800138005',
-    status: '待审核',
-    createTime: '2024-02-18 14:30:00',
-  },
-  {
-    id: 2,
-    activityId: 1,
-    name: '王五',
-    phone: '13800138006',
-    idCard: '440301199001011235',
-    email: 'wangwu@example.com',
-    emergencyContact: '赵六',
-    emergencyPhone: '13800138007',
-    status: '已通过',
-    createTime: '2024-02-18 15:20:00',
-  },
-])
-
 // 查看报名列表
-function viewRegistrations(activity) {
+async function viewRegistrations(activity) {
   currentActivity.value = activity
   showRegistrations.value = true
+  loading.value.registrations = true
+  error.value.registrations = null
+  try {
+    registrations.value = await activityAPI.getRegistrations(activity.id)
+  } catch (err) {
+    error.value.registrations = err.message
+    console.error('获取报名列表失败:', err)
+  } finally {
+    loading.value.registrations = false
+  }
 }
 
 // 更新报名状态
-function updateRegistrationStatus(registration, status) {
-  registration.status = status
+async function updateRegistrationStatus(registration, status) {
+  try {
+    await registrationAPI.updateStatus(registration.id, { status })
+    registration.status = status
+  } catch (err) {
+    console.error('更新报名状态失败:', err)
+  }
 }
 
 // 打开编辑活动对话框
@@ -165,14 +140,19 @@ function openEditActivity(activity) {
 }
 
 // 保存活动编辑
-function saveActivityEdit() {
+async function saveActivityEdit() {
   if (currentActivity.value) {
-    const activity = activities.value.find((a) => a.id === currentActivity.value.id)
-    if (activity) {
-      Object.assign(activity, editActivity.value)
+    try {
+      await activityAPI.updateActivity(currentActivity.value.id, editActivity.value)
+      const activity = activities.value.find((a) => a.id === currentActivity.value.id)
+      if (activity) {
+        Object.assign(activity, editActivity.value)
+      }
+      showEditActivity.value = false
+    } catch (err) {
+      console.error('更新活动失败:', err)
     }
   }
-  showEditActivity.value = false
 }
 
 // 打开编辑志愿者对话框
@@ -188,47 +168,60 @@ function openEditVolunteer(volunteer) {
 }
 
 // 保存志愿者编辑
-function saveVolunteerEdit() {
+async function saveVolunteerEdit() {
   if (currentVolunteer.value) {
-    const volunteer = volunteers.value.find((v) => v.id === currentVolunteer.value.id)
-    if (volunteer) {
-      Object.assign(volunteer, editVolunteer.value)
+    try {
+      await volunteerAPI.updateVolunteer(currentVolunteer.value.id, editVolunteer.value)
+      const volunteer = volunteers.value.find((v) => v.id === currentVolunteer.value.id)
+      if (volunteer) {
+        Object.assign(volunteer, editVolunteer.value)
+      }
+      showEditVolunteer.value = false
+    } catch (err) {
+      console.error('更新志愿者失败:', err)
     }
   }
-  showEditVolunteer.value = false
 }
 
-function addActivity() {
-  activities.value.push({
-    id: activities.value.length + 1,
-    ...newActivity.value,
-    status: '报名中',
-    registered: 0,
-  })
-  showAddActivity.value = false
-  newActivity.value = {
-    title: '',
-    date: '',
-    location: '',
-    capacity: '',
-    description: '',
+async function addActivity() {
+  try {
+    const activity = await activityAPI.createActivity({
+      ...newActivity.value,
+      status: '报名中',
+      registered: 0,
+    })
+    activities.value.push(activity)
+    showAddActivity.value = false
+    newActivity.value = {
+      title: '',
+      date: '',
+      location: '',
+      capacity: '',
+      description: '',
+    }
+  } catch (err) {
+    console.error('创建活动失败:', err)
   }
 }
 
-function addVolunteer() {
-  volunteers.value.push({
-    id: volunteers.value.length + 1,
-    ...newVolunteer.value,
-    hours: 0,
-    activities: 0,
-    status: '活跃',
-  })
-  showAddVolunteer.value = false
-  newVolunteer.value = {
-    name: '',
-    phone: '',
-    email: '',
-    address: '',
+async function addVolunteer() {
+  try {
+    const volunteer = await volunteerAPI.createVolunteer({
+      ...newVolunteer.value,
+      hours: 0,
+      activities: 0,
+      status: '活跃',
+    })
+    volunteers.value.push(volunteer)
+    showAddVolunteer.value = false
+    newVolunteer.value = {
+      name: '',
+      phone: '',
+      email: '',
+      address: '',
+    }
+  } catch (err) {
+    console.error('创建志愿者失败:', err)
   }
 }
 
@@ -236,12 +229,22 @@ function switchTab(tab) {
   currentTab.value = tab
 }
 
-function deleteActivity(id) {
-  activities.value = activities.value.filter((activity) => activity.id !== id)
+async function deleteActivity(id) {
+  try {
+    await activityAPI.deleteActivity(id)
+    activities.value = activities.value.filter((activity) => activity.id !== id)
+  } catch (err) {
+    console.error('删除活动失败:', err)
+  }
 }
 
-function deleteVolunteer(id) {
-  volunteers.value = volunteers.value.filter((volunteer) => volunteer.id !== id)
+async function deleteVolunteer(id) {
+  try {
+    await volunteerAPI.deleteVolunteer(id)
+    volunteers.value = volunteers.value.filter((volunteer) => volunteer.id !== id)
+  } catch (err) {
+    console.error('删除志愿者失败:', err)
+  }
 }
 </script>
 
@@ -289,7 +292,17 @@ function deleteVolunteer(id) {
             </button>
           </div>
 
-          <div class="overflow-x-auto">
+          <div v-if="loading.activities" class="py-12 text-center">
+            <i class="fas fa-spinner fa-spin text-primary text-2xl"></i>
+            <p class="mt-2 text-gray-600">加载中...</p>
+          </div>
+
+          <div v-else-if="error.activities" class="py-12 text-center">
+            <i class="fas fa-exclamation-circle text-red-500 text-2xl"></i>
+            <p class="mt-2 text-red-500">{{ error.activities }}</p>
+          </div>
+
+          <div v-else class="overflow-x-auto">
             <table class="min-w-full">
               <thead class="bg-gray-50">
                 <tr>
@@ -386,7 +399,17 @@ function deleteVolunteer(id) {
             </button>
           </div>
 
-          <div class="overflow-x-auto">
+          <div v-if="loading.volunteers" class="py-12 text-center">
+            <i class="fas fa-spinner fa-spin text-primary text-2xl"></i>
+            <p class="mt-2 text-gray-600">加载中...</p>
+          </div>
+
+          <div v-else-if="error.volunteers" class="py-12 text-center">
+            <i class="fas fa-exclamation-circle text-red-500 text-2xl"></i>
+            <p class="mt-2 text-red-500">{{ error.volunteers }}</p>
+          </div>
+
+          <div v-else class="overflow-x-auto">
             <table class="min-w-full">
               <thead class="bg-gray-50">
                 <tr>
@@ -602,7 +625,17 @@ function deleteVolunteer(id) {
           </button>
         </div>
 
-        <div class="overflow-x-auto">
+        <div v-if="loading.registrations" class="py-12 text-center">
+          <i class="fas fa-spinner fa-spin text-primary text-2xl"></i>
+          <p class="mt-2 text-gray-600">加载中...</p>
+        </div>
+
+        <div v-else-if="error.registrations" class="py-12 text-center">
+          <i class="fas fa-exclamation-circle text-red-500 text-2xl"></i>
+          <p class="mt-2 text-red-500">{{ error.registrations }}</p>
+        </div>
+
+        <div v-else class="overflow-x-auto">
           <table class="min-w-full">
             <thead class="bg-gray-50">
               <tr>
