@@ -1,14 +1,51 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { activityAPI, registrationAPI } from '@/services/api'
+import { ref, onMounted, watch } from 'vue'
+import { activityAPI, registrationAPI, volunteerAPI } from '@/services/api'
 import ActivityList from '@/components/ActivityList.vue'
 import VolunteerList from '@/components/VolunteerList.vue'
 import ActivityFormDialog from '@/components/ActivityFormDialog.vue'
 import VolunteerFormDialog from '@/components/VolunteerFormDialog.vue'
 import RegistrationListDialog from '@/components/RegistrationListDialog.vue'
 
-// 当前选中的标签
+// 页面数据和状态
 const currentTab = ref('activities')
+
+// 活动数据
+const activities = ref([])
+const activitiesLoading = ref(false)
+const activitiesError = ref('')
+
+// 志愿者数据
+const volunteers = ref([])
+const volunteersLoading = ref(false)
+const volunteersError = ref('')
+
+// 加载志愿者列表
+const loadVolunteers = async () => {
+  volunteersLoading.value = true
+  volunteersError.value = ''
+
+  try {
+    const response = await volunteerAPI.getVolunteers()
+    volunteers.value = response.volunteers || []
+  } catch (err) {
+    volunteersError.value = err.message
+  } finally {
+    volunteersLoading.value = false
+  }
+}
+
+// 删除志愿者
+const handleDeleteVolunteer = async (id) => {
+  if (!confirm('确定要删除该志愿者吗？')) return
+
+  try {
+    await volunteerAPI.deleteVolunteer(id)
+    await loadVolunteers() // 重新加载志愿者列表
+  } catch (err) {
+    alert(err.message)
+  }
+}
 
 // 对话框状态
 const showActivityForm = ref(false)
@@ -68,6 +105,33 @@ const handleUpdateStatus = async ({ registration, status }) => {
   }
 }
 
+// 加载活动列表
+const loadActivities = async () => {
+  activitiesLoading.value = true
+  activitiesError.value = ''
+
+  try {
+    const response = await activityAPI.getAllActivities()
+    activities.value = response.activities || []
+  } catch (err) {
+    activitiesError.value = err.message
+  } finally {
+    activitiesLoading.value = false
+  }
+}
+
+// 删除活动
+const handleDeleteActivity = async (id) => {
+  if (!confirm('确定要删除该活动吗？')) return
+
+  try {
+    await activityAPI.deleteActivity(id)
+    await loadActivities() // 重新加载活动列表
+  } catch (err) {
+    alert(err.message)
+  }
+}
+
 // 统计数据
 const stats = ref({
   totalActivities: 0,
@@ -87,8 +151,19 @@ const loadStats = async () => {
   }
 }
 
+// 监听标签页切换
+watch(currentTab, (newTab) => {
+  if (newTab === 'activities') {
+    loadActivities()
+  } else if (newTab === 'volunteers') {
+    loadVolunteers()
+  }
+})
+
 onMounted(() => {
   loadStats()
+  loadActivities()
+  loadVolunteers()
 })
 </script>
 
@@ -206,9 +281,13 @@ onMounted(() => {
               </button>
             </div>
             <ActivityList
-              :allow-manage="true"
-              @edit="openActivityForm"
+              :activities="activities"
+              :loading="activitiesLoading"
+              :error="activitiesError"
+              @edit-activity="openActivityForm"
               @view-registrations="openRegistrations"
+              @delete-activity="handleDeleteActivity"
+              @add-activity="openActivityForm()"
             />
           </div>
 
@@ -224,8 +303,12 @@ onMounted(() => {
               </button>
             </div>
             <VolunteerList
-              :allow-manage="true"
-              @edit="openVolunteerForm"
+              :volunteers="volunteers"
+              :loading="volunteersLoading"
+              :error="volunteersError"
+              @edit-volunteer="openVolunteerForm"
+              @delete-volunteer="handleDeleteVolunteer"
+              @add-volunteer="openVolunteerForm()"
             />
           </div>
         </div>

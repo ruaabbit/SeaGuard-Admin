@@ -31,7 +31,10 @@ const notificationCount = ref(3)
 <template>
   <div id="app" class="min-h-screen bg-gray-50">
     <!-- Header -->
-    <header v-if="route.path !== '/login' && route.path !== '/register'" class="fixed w-full bg-white shadow-sm z-50">
+    <header
+      v-if="route.path !== '/login' && route.path !== '/register'"
+      class="fixed w-full bg-white shadow-sm z-50"
+    >
       <div class="max-w-7xl mx-auto px-4">
         <div class="flex justify-between items-center h-16">
           <!-- Logo and Navigation -->
@@ -74,10 +77,7 @@ const notificationCount = ref(3)
           <div class="flex items-center space-x-4">
             <!-- Login/Register Buttons (when not logged in) -->
             <template v-if="!token">
-              <router-link
-                to="/login"
-                class="text-gray-500 hover:text-primary px-3 py-2"
-              >
+              <router-link to="/login" class="text-gray-500 hover:text-primary px-3 py-2">
                 登录
               </router-link>
               <router-link
@@ -103,10 +103,7 @@ const notificationCount = ref(3)
 
               <!-- User Dropdown -->
               <div class="relative">
-                <button
-                  @click="showUserMenu = !showUserMenu"
-                  class="flex items-center space-x-3"
-                >
+                <button @click="showUserMenu = !showUserMenu" class="flex items-center space-x-3">
                   <img
                     class="h-8 w-8 rounded-full"
                     src="https://ai-public.mastergo.com/ai/img_res/51f02cdcba26ee7cd1858c81f48f9215.jpg"
@@ -156,10 +153,7 @@ const notificationCount = ref(3)
         </div>
 
         <!-- Mobile Navigation -->
-        <div
-          v-show="showMobileMenu"
-          class="md:hidden border-t border-gray-200 py-2"
-        >
+        <div v-show="showMobileMenu" class="md:hidden border-t border-gray-200 py-2">
           <router-link
             to="/"
             class="block py-2 text-gray-500 hover:text-primary"

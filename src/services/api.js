@@ -10,10 +10,21 @@ const getAuthHeader = () => {
 // 统一处理响应
 const handleResponse = async (response) => {
   if (!response.ok) {
-    const error = await response.json();
+    let error;
+    try {
+      error = await response.json();
+    } catch (error) {
+      console.error('Failed to parse error response:', error);
+      throw new Error('网络请求失败，请稍后重试');
+    }
     throw new Error(error.message || '请求失败');
   }
-  return response.json();
+
+  const data = await response.json();
+  if (!data) {
+    throw new Error('服务器返回数据异常');
+  }
+  return data;
 };
 
 // 认证相关API
@@ -30,13 +41,13 @@ export const authAPI = {
   },
 
   // 用户注册
-  register(username, password, role) {
+  register(data) {
     return fetch(`${BASE_URL}/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ username, password, role }),
+      body: JSON.stringify(data),
     }).then(handleResponse);
   },
 
@@ -48,7 +59,10 @@ export const authAPI = {
         'Content-Type': 'application/json',
         ...getAuthHeader(),
       },
-      body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+      body: JSON.stringify({
+        old_password: oldPassword,
+        new_password: newPassword
+      }),
     }).then(handleResponse);
   },
 };
@@ -85,9 +99,16 @@ export const userAPI = {
 
 // 活动相关API
 export const activityAPI = {
-  // 获取活动列表
+  // 获取可报名活动列表（志愿者）
   getActivities() {
     return fetch(`${BASE_URL}/activities`, {
+      headers: getAuthHeader(),
+    }).then(handleResponse);
+  },
+
+  // 获取所有活动列表（管理员）
+  getAllActivities() {
+    return fetch(`${BASE_URL}/admin/activities`, {
       headers: getAuthHeader(),
     }).then(handleResponse);
   },
@@ -149,6 +170,24 @@ export const registrationAPI = {
 
 // 志愿者相关API
 export const volunteerAPI = {
+  // 获取志愿者个人信息
+  getMyInfo() {
+    return fetch(`${BASE_URL}/volunteer/my-info`, {
+      headers: getAuthHeader(),
+    }).then(handleResponse);
+  },
+
+  // 更新志愿者个人信息
+  updateMyInfo(info) {
+    return fetch(`${BASE_URL}/volunteer/my-info`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify(info),
+    }).then(handleResponse);
+  },
   // 获取志愿者列表
   getVolunteers() {
     return fetch(`${BASE_URL}/volunteers`, {
